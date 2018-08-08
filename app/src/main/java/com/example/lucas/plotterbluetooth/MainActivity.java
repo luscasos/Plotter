@@ -8,13 +8,17 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
-    int bluetoothR0equest = 1;
-    BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    private static final int bluetoothRequest = 1;
+    private static final int conectionRequest = 2;
 
+    BluetoothAdapter mBluetoothAdapter;
+    Button parearButton;
+    boolean conectado;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,6 +26,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Inicialização do bluetooth
+        conectado = false;
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        parearButton = (Button)findViewById(R.id.parearButton);
+
         if (mBluetoothAdapter == null) {
             // Device does not support Bluetooth
             Toast.makeText(this, "Não há suporte a Bluetooth", Toast.LENGTH_LONG).show();
@@ -29,8 +37,22 @@ public class MainActivity extends AppCompatActivity {
             finish();
         }   else if (!mBluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, bluetoothR0equest);
+            startActivityForResult(enableBtIntent, bluetoothRequest);
         }
+
+        parearButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                if(conectado){
+                    // desconecta
+                }else{
+                    Intent abrelista = new Intent(MainActivity.this, ListaDispositivos.class);
+                    startActivityForResult(abrelista,conectionRequest);
+                }
+            }
+        });
+
     }
 
     public void manual(){

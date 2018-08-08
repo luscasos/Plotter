@@ -20,6 +20,9 @@
             </intent-filter>
         </activity>
         <activity android:name=".Manual"></activity>
+        <activity android:name=".ListaDispositivos"
+            android:theme="@android:style/Theme.Dialog"
+            android:label="Dispositivos Pareados"/>
     </application>
 
 </manifest>
