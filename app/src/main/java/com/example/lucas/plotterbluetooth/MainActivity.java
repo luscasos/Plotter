@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
         // Inicialização do bluetooth
         conectado = false;
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        parearButton = (Button)findViewById(R.id.parearButton);
+        parearButton = findViewById(R.id.parearButton);
 
         if (mBluetoothAdapter == null) {
             // Device does not support Bluetooth
