@@ -16,6 +16,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
+
+import com.jjoe64.graphview.GraphView;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -40,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
     Button parearButton;
     Button OKButton;
+    Button graphButton;
     boolean conectado=false;
 
     @Override
@@ -51,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         parearButton = findViewById(R.id.parearButton);
         OKButton = findViewById(R.id.OKButton);
+        graphButton = findViewById(R.id.graphButton);
 
         // Verifica se há suporte a bluetooth
         if (mBluetoothAdapter == null) {
@@ -124,8 +129,11 @@ public class MainActivity extends AppCompatActivity {
 
     // Inicia outra Activity a partir de botão ou ActionBar
     public void manual(){
-
         Intent intent = new Intent(this, Manual.class);
+        startActivity(intent);
+    }
+    public void GraphView(View view){
+        Intent intent = new Intent(this, GraphActivity.class);
         startActivity(intent);
     }
     public void manual(View view){

@@ -13,4 +13,8 @@ Praticamente qualquer açúcar ou alimento que contenha amido pode, naturalmente
 A cerveja teve alguma importância na vida dos primeiros romanos, mas, durante a República Romana, o vinho destronou a cerveja como a bebida alcoólica preferida, passando esta a ser considerada uma bebida própria de bárbaros. Tácito, em seus dias, escreveu depreciativamente acerca da cerveja preparada pelos povos germânicos.</string>
     <string name="Conectar">Conectar</string>
     <string name="Desconectar">Desconectar</string>
+    <string name="grafico">Grafico</string>
+    <string name="liga_led">Liga Led</string>
+    <string name="manual">Manual</string>
+    <string name="parear">Parear</string>
 </resources>
