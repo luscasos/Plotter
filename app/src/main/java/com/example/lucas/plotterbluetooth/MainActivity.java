@@ -27,8 +27,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int conectionRequest = 2;
     private static final int MESSAGE_READ = 3;
 
-    private static String MAC = null;
-
     Handler mHandler;
 
     StringBuilder dadosRecebidos = new StringBuilder();
@@ -41,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     ConnectedThread connectedThread;
 
     Button parearButton;
+    Button OKButton;
     boolean conectado=false;
 
     @Override
@@ -48,17 +47,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Inicialização do bluetooth
+        // Inicialização do bluetooth e botões
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         parearButton = findViewById(R.id.parearButton);
+        OKButton = findViewById(R.id.OKButton);
 
+        // Verifica se há suporte a bluetooth
         if (mBluetoothAdapter == null) {
             // Device does not support Bluetooth
             Toast.makeText(this, "Não há suporte a Bluetooth", Toast.LENGTH_LONG).show();
             Toast.makeText(this, "Finalizando", Toast.LENGTH_SHORT).show();
             finish();
         }
-
+        // Inicia conexão bluetooth
         parearButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -68,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
                     try{
                         meuSocket.close();
                         conectado = false;
-                        parearButton.setText("Conectar");
+                        parearButton.setText(R.string.Conectar);
                         Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
                     }catch (IOException erro){
                         Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
@@ -81,23 +82,47 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Gerencia o recebimento de dados do bluetooth
         mHandler = new Handler(){
             @Override
             public void handleMessage(Message msg) {
 
                 if (msg.what == MESSAGE_READ){
                     String recebidos = (String) msg.obj;
-                    dadosRecebidos.append(recebidos);
-                    Log.d("Recebidos",recebidos);
+                    dadosRecebidos.append(recebidos);           // acumula dados recebidos
+                    int fimInformacao = dadosRecebidos.indexOf("}");
 
+                    //Log.d("Recebidos parcial",recebidos);
 
+                    if(fimInformacao > 0){
+
+                        String dadosCompletos = dadosRecebidos.substring(0,fimInformacao);
+                        Log.d("Recebidos",dadosCompletos);
+                        dadosRecebidos = new StringBuilder();       // reinicia o acumulador de dados
+                    }
                 }
 
             }
         };
 
+        // Envia uma string via bluetooth por meio de click em botão
+        OKButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(conectado){
+                    connectedThread.write("O");
+                    Toast.makeText(getApplicationContext(), "OK", Toast.LENGTH_SHORT).show();
+                }else{
+                    Toast.makeText(getApplicationContext(), "Não conectado a nenhum dispositivo", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+
     }
 
+
+    // Inicia outra Activity a partir de botão ou ActionBar
     public void manual(){
 
         Intent intent = new Intent(this, Manual.class);
@@ -109,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    // iniciando ActionBar
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -116,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    // Opções da ActionBar
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
@@ -131,28 +158,29 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Checa o resultado da janela de conexão
     @Override
     protected void onActivityResult(int requestCode,int resultCode, Intent data){
         switch (requestCode){
             case conectionRequest:
                 if (resultCode == Activity.RESULT_OK){
-                    MAC = Objects.requireNonNull(data.getExtras()).getString(ListaDispositivos.ENDERECO_MAC);
+                    String MAC = Objects.requireNonNull(data.getExtras()).getString(ListaDispositivos.ENDERECO_MAC);
                     //Toast.makeText(this, "MAC final" + MAC, Toast.LENGTH_LONG).show();
                     meuDevice = mBluetoothAdapter.getRemoteDevice(MAC);
 
                     try{
                         meuSocket = meuDevice.createInsecureRfcommSocketToServiceRecord(meuUUID);
                         meuSocket.connect();
-                        parearButton.setText("Desconectar");
+                        parearButton.setText(R.string.Desconectar);
                         conectado = true;
 
                         connectedThread = new ConnectedThread(meuSocket);
                         connectedThread.start();
 
-                        Toast.makeText(this, "Conectado", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Conectado", Toast.LENGTH_SHORT).show();
                     }catch(IOException erro){
                         conectado = false;
-                        Toast.makeText(this, "Erro na conexão"+erro, Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Erro na conexão"+erro, Toast.LENGTH_SHORT).show();
                     }
 
                 }else{
@@ -160,12 +188,15 @@ public class MainActivity extends AppCompatActivity {
                 }
         }
     }
+
+
+    // Gerenciamento da conexão bluetooth
     private class ConnectedThread extends Thread {
        // private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
 
-        public ConnectedThread(BluetoothSocket socket) {
+        ConnectedThread(BluetoothSocket socket) {
 
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
@@ -175,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
-            } catch (IOException e) { }
+            } catch (IOException ignored) { }
 
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
@@ -201,13 +232,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        // connectedThread.write(string);   Para enviar dados
         /* Call this from the main activity to send data to the remote device */
-        public void write(byte[] bytes) {
+        public void write(String dadosEnviar) {
 
+            byte[] msgBuffer = dadosEnviar.getBytes();
             try {
-                mmOutStream.write(bytes);
-            } catch (IOException e) { }
+                mmOutStream.write(msgBuffer);
+            } catch (IOException ignored) { }
         }
 
     }
+
+
 }
