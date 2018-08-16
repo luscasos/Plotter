@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".MainActivity">
 
 
@@ -11,40 +11,26 @@
         android:id="@+id/graphButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="8dp"
         android:onClick="GraphView"
         android:text="@string/grafico"
-        app:layout_constraintTop_toBottomOf="@+id/OKButton"
-        tools:layout_editor_absoluteX="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteX="0dp"
         tools:text="graph" />
 
-    <Button
-        android:id="@+id/OKButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="@string/liga_led"
-        app:layout_constraintTop_toBottomOf="@+id/manualButton"
-        tools:layout_editor_absoluteX="31dp"
-        tools:text="OK" />
 
     <Button
         android:id="@+id/manualButton"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
         android:onClick="manual"
         android:text="@string/manual"
-        app:layout_constraintTop_toBottomOf="@+id/parearButton"
-        tools:layout_editor_absoluteX="16dp" />
-
-    <Button
-        android:id="@+id/parearButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="@string/parear"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/graphButton"
+        tools:ignore="MissingConstraints"
         tools:layout_editor_absoluteX="0dp" />
+
+
 
 </android.support.constraint.ConstraintLayout>
