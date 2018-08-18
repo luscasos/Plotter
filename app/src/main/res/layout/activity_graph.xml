@@ -21,7 +21,7 @@
 
     <Button
         android:id="@+id/button"
-        android:layout_width="64dp"
+        android:layout_width="97dp"
         android:layout_height="42dp"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
@@ -46,7 +46,7 @@
 
     <Button
         android:id="@+id/parearButton"
-        android:layout_width="64dp"
+        android:layout_width="86dp"
         android:layout_height="42dp"
         android:layout_marginBottom="8dp"
         android:layout_marginStart="8dp"

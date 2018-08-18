@@ -24,6 +24,7 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -49,7 +50,9 @@ public class GraphActivity extends AppCompatActivity {
     Button parearButton;
     Button OKButton;
 
-    double lastX=0;
+    ArrayList<temperaturasBluetooth> listaTemperaturas=null;
+
+    float lastX=0;
     LineGraphSeries<DataPoint> series;
 
     @SuppressLint("HandlerLeak")
@@ -57,6 +60,8 @@ public class GraphActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
+
+        listaTemperaturas = new ArrayList<temperaturasBluetooth>();
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         parearButton = findViewById(R.id.parearButton);
@@ -108,13 +113,14 @@ public class GraphActivity extends AppCompatActivity {
                         Log.d("Recebidos",dadosCompletos);
                             try {
                                 float num = Float.parseFloat(dadosCompletos);
-
+                                listaTemperaturas.add(new temperaturasBluetooth(lastX,num));
                                 series.appendData(new DataPoint(lastX,num),true,1000);
+
                             }
                             catch(NumberFormatException e){
                                 //Log.i();
                             }
-                        lastX=lastX+0.5;
+                        lastX= (float) (lastX+0.5);
                         dadosRecebidos = new StringBuilder();       // reinicia o acumulador de dados
                     }
                 }    }
@@ -150,9 +156,17 @@ public class GraphActivity extends AppCompatActivity {
     }
 
     public void addEntry(View view){
+        int n = listaTemperaturas.size();
+        int i;
+        float x,y;
+        for (i=0; i<n; i++) {
+            temperaturasBluetooth dado = listaTemperaturas.get(i);
+            x=dado.getX();
+            y=dado.getY();
+            Toast.makeText(this,"X = "+x +"Y = "+y, Toast.LENGTH_SHORT).show();
+        }
 
-        series.appendData(new DataPoint(lastX,sin(lastX)+1),true,1000);
-        lastX=lastX+0.5;
+
     }
 
 
@@ -242,5 +256,19 @@ public class GraphActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
 
+        try{
+            meuSocket.close();
+            conectado = false;
+            parearButton.setText(R.string.Conectar);
+            Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
+        }catch (IOException erro){
+            Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
+        }
+
+
+    }
 }
