@@ -104,6 +104,7 @@ public class GraphActivity extends AppCompatActivity {
                 if (msg.what == MESSAGE_READ){
                     String recebidos = (String) msg.obj;
                     dadosRecebidos.append(recebidos);           // acumula dados recebidos
+                    Log.d("Recebidos parcial",recebidos);
                     int fimInformacao = dadosRecebidos.indexOf("}");
 
                     //Log.d("Recebidos parcial",recebidos);
@@ -256,6 +257,8 @@ public class GraphActivity extends AppCompatActivity {
 
     }
 
+
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -268,7 +271,6 @@ public class GraphActivity extends AppCompatActivity {
         }catch (IOException erro){
             Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
         }
-
-
     }
+
 }

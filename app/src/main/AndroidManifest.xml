@@ -24,7 +24,8 @@
             android:name=".ListaDispositivos"
             android:label="Dispositivos Pareados"
             android:theme="@android:style/Theme.Dialog" />
-        <activity android:name=".GraphActivity"></activity>
+        <activity   android:name=".GraphActivity"
+                    android:configChanges="orientation|keyboardHidden|screenSize"></activity>
     </application>
 
 </manifest>
