@@ -2,12 +2,17 @@ package com.example.lucas.plotterbluetooth;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -26,13 +31,8 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
-
-
-
     Button OKButton;
     Button graphButton;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         graphButton = findViewById(R.id.graphButton);
+
 
 
     }
@@ -79,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             case R.id.segundoBotao:
                 Toast.makeText(this, "segundo botão", Toast.LENGTH_SHORT).show();
+
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

@@ -2,15 +2,23 @@ package com.example.lucas.plotterbluetooth;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Handler;
 import android.os.Message;
 
+import android.service.notification.StatusBarNotification;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.BoringLayout;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -40,6 +48,8 @@ public class GraphActivity extends AppCompatActivity {
 
     StringBuilder dadosRecebidos = new StringBuilder();
 
+    NotificationManager mNotificationManager;
+
     BluetoothAdapter mBluetoothAdapter = null;
     BluetoothDevice meuDevice = null;
     BluetoothSocket meuSocket=null;
@@ -60,6 +70,21 @@ public class GraphActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
+
+        Intent iin= getIntent();
+        Bundle b = iin.getExtras();
+        Boolean notificacao=false;
+
+        if(b!=null)
+        {
+            notificacao = b.getBoolean("notificacao",false);
+        }
+
+        if(notificacao){
+            Toast.makeText(this, "pdc meu", Toast.LENGTH_LONG).show();
+
+        }
+
 
         listaTemperaturas = new ArrayList<temperaturasBluetooth>();
 
@@ -115,6 +140,7 @@ public class GraphActivity extends AppCompatActivity {
                             try {
                                 float num = Float.parseFloat(dadosCompletos);
                                 listaTemperaturas.add(new temperaturasBluetooth(lastX,num));
+                                showNotification(num);
                                 series.appendData(new DataPoint(lastX,num),true,1000);
 
                             }
@@ -156,6 +182,28 @@ public class GraphActivity extends AppCompatActivity {
 
     }
 
+    public void showNotification(float temp){
+        mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+// Sets an ID for the notification, so it can be updated
+        int notifyID = 1;
+        NotificationCompat.Builder mNotifyBuilder = new NotificationCompat.Builder(this,"id")
+                //.setContentTitle("Temperatura")
+                //.setContentText("You've received new messages.")
+                .setSmallIcon(R.drawable.temperature)
+                .setColor(getResources().getColor(R.color.colorBackgroundTemp))
+                .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+
+        mNotifyBuilder.setContentTitle("Temperatura "+temp+"ºC");
+        // Because the ID remains unchanged, the existing notification is
+        // updated.
+        if (mNotificationManager != null) {
+            mNotificationManager.notify(
+                    notifyID,
+                    mNotifyBuilder.build());
+        }
+    }
+
     public void addEntry(View view){
         int n = listaTemperaturas.size();
         int i;
@@ -166,8 +214,6 @@ public class GraphActivity extends AppCompatActivity {
             y=dado.getY();
             Toast.makeText(this,"X = "+x +"Y = "+y, Toast.LENGTH_SHORT).show();
         }
-
-
     }
 
 
@@ -262,14 +308,20 @@ public class GraphActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        try {
+            mNotificationManager.cancelAll();
+        }catch (Exception ignored){
 
-        try{
-            meuSocket.close();
-            conectado = false;
-            parearButton.setText(R.string.Conectar);
-            Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
-        }catch (IOException erro){
-            Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
+        }
+        if(conectado) {
+            try {
+                meuSocket.close();
+                conectado = false;
+                parearButton.setText(R.string.Conectar);
+                //Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
+            } catch (IOException erro) {
+                Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
+            }
         }
     }
 
