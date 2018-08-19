@@ -2,24 +2,17 @@ package com.example.lucas.plotterbluetooth;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
 
-import android.service.notification.StatusBarNotification;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.BoringLayout;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -29,40 +22,25 @@ import com.jjoe64.graphview.Viewport;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.UUID;
-
-import static java.lang.Math.sin;
 
 
-public class GraphActivity extends AppCompatActivity {
+public class GraphActivity extends AppCompatActivity implements ServiceConnection {
 
     private static final int conectionRequest = 2;
-    private static final int MESSAGE_READ = 3;
-
-    Handler mHandler;
-
-    StringBuilder dadosRecebidos = new StringBuilder();
-
-    NotificationManager mNotificationManager;
-
-    BluetoothAdapter mBluetoothAdapter = null;
-    BluetoothDevice meuDevice = null;
-    BluetoothSocket meuSocket=null;
-    UUID meuUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-
-    ConnectedThread connectedThread;
     boolean conectado=false;
+
     Button parearButton;
     Button OKButton;
 
+    private ServiceConnection connection;
+
+    private Templistiner temp;
+
     ArrayList<temperaturasBluetooth> listaTemperaturas=null;
 
-    float lastX=0;
+
     LineGraphSeries<DataPoint> series;
 
     @SuppressLint("HandlerLeak")
@@ -71,88 +49,13 @@ public class GraphActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
 
-        Intent iin= getIntent();
-        Bundle b = iin.getExtras();
-        Boolean notificacao=false;
-
-        if(b!=null)
-        {
-            notificacao = b.getBoolean("notificacao",false);
-        }
-
-        if(notificacao){
-            Toast.makeText(this, "pdc meu", Toast.LENGTH_LONG).show();
-
-        }
-
+        connection = this;
 
         listaTemperaturas = new ArrayList<temperaturasBluetooth>();
 
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
         parearButton = findViewById(R.id.parearButton);
         OKButton = findViewById(R.id.OKButton);
-
-        if (mBluetoothAdapter == null) {
-            // Device does not support Bluetooth
-            Toast.makeText(this, "Não há suporte a Bluetooth", Toast.LENGTH_LONG).show();
-            Toast.makeText(this, "Finalizando", Toast.LENGTH_SHORT).show();
-            finish();
-        }
-        // Inicia conexão bluetooth
-        parearButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                if(conectado){
-                    //desconectar
-                    try{
-                        meuSocket.close();
-                        conectado = false;
-                        parearButton.setText(R.string.Conectar);
-                        Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
-                    }catch (IOException erro){
-                        Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
-                    }
-                }else{
-                    //conectar
-                    Intent abrelista = new Intent(getApplicationContext(), ListaDispositivos.class);
-                    startActivityForResult(abrelista,conectionRequest);
-                }
-            }
-        });
-
-        // Gerencia o recebimento de dados do bluetooth
-        mHandler = new Handler(){
-            @Override
-            public void handleMessage(Message msg) {
-
-                if (msg.what == MESSAGE_READ){
-                    String recebidos = (String) msg.obj;
-                    dadosRecebidos.append(recebidos);           // acumula dados recebidos
-                    Log.d("Recebidos parcial",recebidos);
-                    int fimInformacao = dadosRecebidos.indexOf("}");
-
-                    //Log.d("Recebidos parcial",recebidos);
-
-                    if(fimInformacao > 0){
-                        String dadosCompletos = dadosRecebidos.substring(0,fimInformacao);
-                        Log.d("Recebidos",dadosCompletos);
-                            try {
-                                float num = Float.parseFloat(dadosCompletos);
-                                listaTemperaturas.add(new temperaturasBluetooth(lastX,num));
-                                showNotification(num);
-                                series.appendData(new DataPoint(lastX,num),true,1000);
-
-                            }
-                            catch(NumberFormatException e){
-                                //Log.i();
-                            }
-                        lastX= (float) (lastX+0.5);
-                        dadosRecebidos = new StringBuilder();       // reinicia o acumulador de dados
-                    }
-                }    }
-        };
-
 
         GraphView graph = findViewById(R.id.graph);
         series = new LineGraphSeries<DataPoint>();
@@ -166,41 +69,50 @@ public class GraphActivity extends AppCompatActivity {
         viewport.setMaxX(20);
         viewport.setXAxisBoundsManual(true);
 
-
-        // Envia uma string via bluetooth por meio de click em botão
-        OKButton.setOnClickListener(new View.OnClickListener() {
+        parearButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
                 if(conectado){
-                    connectedThread.write("O");
+                    //desconectar
+                    /*try{
+                        meuSocket.close();
+                        conectado = false;
+                        parearButton.setText(R.string.Conectar);
+                        Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
+                    }catch (IOException erro){
+                        Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
+                    }*/
                 }else{
-                    Toast.makeText(getApplicationContext(), "Não conectado a nenhum dispositivo", Toast.LENGTH_SHORT).show();
+                    //conectar
+
+                    Intent abrelista = new Intent(getApplicationContext(), ListaDispositivos.class);
+                    startActivityForResult(abrelista,conectionRequest);
                 }
             }
         });
+    }
 
+    public void printTemp(View view){
+        super.onResume();
+      //  bindService(new Intent(this,service.class),connection,0);
+       // Toast.makeText(getApplicationContext(), "TEMP na graph activity"+temp.getTemplistiner(), Toast.LENGTH_SHORT).show();
 
     }
 
-    public void showNotification(float temp){
-        mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-// Sets an ID for the notification, so it can be updated
-        int notifyID = 1;
-        NotificationCompat.Builder mNotifyBuilder = new NotificationCompat.Builder(this,"id")
-                //.setContentTitle("Temperatura")
-                //.setContentText("You've received new messages.")
-                .setSmallIcon(R.drawable.temperature)
-                .setColor(getResources().getColor(R.color.colorBackgroundTemp))
-                .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+    protected void onActivityResult(int requestCode,int resultCode, Intent data){
+        switch (requestCode){
+            case conectionRequest:
+                if (resultCode == Activity.RESULT_OK){
+                    String MAC = Objects.requireNonNull(data.getExtras()).getString(ListaDispositivos.ENDERECO_MAC);
+                    //Toast.makeText(this, "MAC final" + MAC, Toast.LENGTH_LONG).show();
+                    Intent intent = new Intent(this,service.class);
+                    intent.putExtra("MAC",MAC);
+                    startService(intent);
 
-        mNotifyBuilder.setContentTitle("Temperatura "+temp+"ºC");
-        // Because the ID remains unchanged, the existing notification is
-        // updated.
-        if (mNotificationManager != null) {
-            mNotificationManager.notify(
-                    notifyID,
-                    mNotifyBuilder.build());
+                }else{
+                    Toast.makeText(this, "Falha ao obter MAC", Toast.LENGTH_SHORT).show();
+                }
         }
     }
 
@@ -216,113 +128,20 @@ public class GraphActivity extends AppCompatActivity {
         }
     }
 
-
-    // Checa o resultado da janela de conexão
     @Override
-    protected void onActivityResult(int requestCode,int resultCode, Intent data){
-        switch (requestCode){
-            case conectionRequest:
-                if (resultCode == Activity.RESULT_OK){
-                    String MAC = Objects.requireNonNull(data.getExtras()).getString(ListaDispositivos.ENDERECO_MAC);
-                    //Toast.makeText(this, "MAC final" + MAC, Toast.LENGTH_LONG).show();
-                    meuDevice = mBluetoothAdapter.getRemoteDevice(MAC);
-
-                    try{
-                        meuSocket = meuDevice.createInsecureRfcommSocketToServiceRecord(meuUUID);
-                        meuSocket.connect();
-                        parearButton.setText(R.string.Desconectar);
-                        conectado = true;
-
-                        connectedThread = new ConnectedThread(meuSocket);
-                        connectedThread.start();
-
-                        Toast.makeText(this, "Conectado", Toast.LENGTH_SHORT).show();
-                    }catch(IOException erro){
-                        conectado = false;
-                        Toast.makeText(this, "Erro na conexão"+erro, Toast.LENGTH_SHORT).show();
-                    }
-
-                }else{
-                    Toast.makeText(this, "Falha ao obter MAC", Toast.LENGTH_SHORT).show();
-                }
-        }
+    public void onServiceConnected(ComponentName name, IBinder service) {
+         com.example.lucas.plotterbluetooth.service.Controller controller = (com.example.lucas.plotterbluetooth.service.Controller)service;
+         temp= controller.getTemplistiner();
     }
 
-
-    // Gerenciamento da conexão bluetooth
-    private class ConnectedThread extends Thread {
-        // private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
-
-        ConnectedThread(BluetoothSocket socket) {
-
-            InputStream tmpIn = null;
-            OutputStream tmpOut = null;
-
-            // Get the input and output streams, using temp objects because
-            // member streams are final
-            try {
-                tmpIn = socket.getInputStream();
-                tmpOut = socket.getOutputStream();
-            } catch (IOException ignored) { }
-
-            mmInStream = tmpIn;
-            mmOutStream = tmpOut;
-        }
-
-        public void run() {
-            byte[] buffer = new byte[1024];  // buffer store for the stream
-            int bytes; // bytes returned from read()
-
-            // Keep listening to the InputStream until an exception occurs
-            while (true) {
-                try {
-                    // Read from the InputStream
-                    bytes = mmInStream.read(buffer);
-
-                    String dadosBt = new String(buffer,0,bytes);
-                    // Send the obtained bytes to the UI activity
-                    mHandler.obtainMessage(MESSAGE_READ, bytes, -1, dadosBt).sendToTarget();
-
-                } catch (IOException e) {
-                    break;
-                }
-            }
-        }
-
-        // connectedThread.write(string);   Para enviar dados
-        /* Call this from the main activity to send data to the remote device */
-        public void write(String dadosEnviar) {
-
-            byte[] msgBuffer = dadosEnviar.getBytes();
-            try {
-                mmOutStream.write(msgBuffer);
-            } catch (IOException ignored) { }
-        }
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
 
     }
-
-
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        try {
-            mNotificationManager.cancelAll();
-        }catch (Exception ignored){
-
-        }
-        if(conectado) {
-            try {
-                meuSocket.close();
-                conectado = false;
-                parearButton.setText(R.string.Conectar);
-                //Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
-            } catch (IOException erro) {
-                Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
-            }
-        }
+       // unbindService(connection);
     }
-
 }

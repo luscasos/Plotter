@@ -32,6 +32,7 @@ import java.util.UUID;
 public class MainActivity extends AppCompatActivity {
 
     Button OKButton;
+    Button threadButton;
     Button graphButton;
 
     @Override
@@ -41,8 +42,6 @@ public class MainActivity extends AppCompatActivity {
 
 
         graphButton = findViewById(R.id.graphButton);
-
-
 
     }
 

@@ -29,6 +29,8 @@
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:launchMode="singleTop">
         </activity>
+
+        <service android:name=".service" />
     </application>
 
 </manifest>
