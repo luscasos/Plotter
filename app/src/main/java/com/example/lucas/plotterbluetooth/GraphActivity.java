@@ -2,6 +2,7 @@ package com.example.lucas.plotterbluetooth;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -9,12 +10,15 @@ import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.jjoe64.graphview.GraphView;
@@ -22,6 +26,9 @@ import com.jjoe64.graphview.Viewport;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -29,10 +36,19 @@ import java.util.Objects;
 public class GraphActivity extends AppCompatActivity implements ServiceConnection {
 
     private static final int conectionRequest = 2;
+    private static final int MESSAGE_READ = 3;
     boolean conectado=false;
+
+    service mService;
+    boolean mBound = false;
+
+    float lastX=0;
+
+    Handler handler;
 
     Button parearButton;
     Button OKButton;
+    TextView textView;
 
     private ServiceConnection connection;
 
@@ -49,10 +65,9 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
 
-        connection = this;
-
         listaTemperaturas = new ArrayList<temperaturasBluetooth>();
 
+        connection=this;
 
         parearButton = findViewById(R.id.parearButton);
         OKButton = findViewById(R.id.OKButton);
@@ -60,7 +75,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         GraphView graph = findViewById(R.id.graph);
         series = new LineGraphSeries<DataPoint>();
         graph.addSeries(series);
-
 
         Viewport viewport = graph.getViewport();
         viewport.setScalable(true);
@@ -85,19 +99,68 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                     }*/
                 }else{
                     //conectar
-
                     Intent abrelista = new Intent(getApplicationContext(), ListaDispositivos.class);
                     startActivityForResult(abrelista,conectionRequest);
                 }
             }
         });
+
+        //chamo um método para o tratamento da mensagem
+        //e melhor organização do código.
+        handler = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                //chamo um método para melhor organização.
+
+                //defino no meu TextView o texto.
+                //textView.setText(texto);
+                //int temp = Integer.parseInt(texto);
+                try{
+                    int temp = (int) msg.obj;
+                    series.appendData(new DataPoint(lastX,temp),true,1000);
+                    lastX= (float) (lastX+0.5);
+                }catch (Exception ignored){
+
+                }
+
+            }
+        };
+
+
+        //Thread responsável pelo processamento de dados.
+        //O handler é passado para que sejá possível atualizar a tela.
+        ThreadProcessamento threadProcessamento = new ThreadProcessamento(handler);
+        threadProcessamento.start();
+
     }
 
-    public void printTemp(View view){
-        super.onResume();
-      //  bindService(new Intent(this,service.class),connection,0);
-       // Toast.makeText(getApplicationContext(), "TEMP na graph activity"+temp.getTemplistiner(), Toast.LENGTH_SHORT).show();
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Bind to LocalService
+        Intent intent = new Intent(this, service.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Unbind from the service
+        if (mBound) {
+            unbindService(connection);
+            mBound = false;
+        }
+    }
+
+    public void onButtonClick(View v) {
+        if (mBound) {
+            // Call a method from the LocalService.
+            // However, if this call were something that might hang, then this request should
+            // occur in a separate thread to avoid slowing down the activity performance.
+            int num = mService.getTemp();
+            Toast.makeText(this, "number: " + num, Toast.LENGTH_SHORT).show();
+        }
     }
 
     protected void onActivityResult(int requestCode,int resultCode, Intent data){
@@ -128,20 +191,65 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         }
     }
 
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-         com.example.lucas.plotterbluetooth.service.Controller controller = (com.example.lucas.plotterbluetooth.service.Controller)service;
-         temp= controller.getTemplistiner();
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-
-    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-       // unbindService(connection);
+        //unbindService(connection);
+    }
+
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+        // We've bound to LocalService, cast the IBinder and get LocalService instance
+        com.example.lucas.plotterbluetooth.service.LocalBinder binder = (com.example.lucas.plotterbluetooth.service.LocalBinder) service;
+        mService = binder.getService();
+        mBound = true;
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
+        mBound = false;
+    }
+
+    public class ThreadProcessamento extends Thread {
+
+        private Handler handler;
+
+        public ThreadProcessamento(Handler handler) {
+            this.handler = handler;
+        }
+
+        @Override
+        public void run() {
+            int temp=0;
+            while (true) {
+                Message message = new Message();
+                //defino um codigo para controle.
+
+                int num=0;
+                message.what = 1;
+                if (mBound) {
+                    // Call a method from the LocalService.
+                    // However, if this call were something that might hang, then this request should
+                    // occur in a separate thread to avoid slowing down the activity performance.
+                    num = mService.getTemp();
+                    message.obj =num;
+                    //Toast.makeText(this, "number: " + num, Toast.LENGTH_SHORT).show();
+                }
+                if(num!=temp){
+                    //Envio da mensagem.
+                    handler.sendMessage(message);
+                    temp=num;
+                }
+
+                try {
+                    //simula processamento de 1seg
+                    Thread.sleep(100);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
     }
 }

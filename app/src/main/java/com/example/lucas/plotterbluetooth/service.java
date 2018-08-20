@@ -1,9 +1,10 @@
 package com.example.lucas.plotterbluetooth;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.app.TaskStackBuilder;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -16,19 +17,15 @@ import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
-
-import com.jjoe64.graphview.series.DataPoint;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.UUID;
 
-public class service extends Service implements Templistiner {
+public class service extends Service {
 
     private static final int MESSAGE_READ = 3;
 
@@ -47,26 +44,24 @@ public class service extends Service implements Templistiner {
 
     NotificationManager mNotificationManager;
 
-    @Override
-    public int getTemplistiner() {
-        return temp;
-    }
+    private final IBinder mBinder = new LocalBinder();
 
-    private Controller controller= new Controller();
-
-    public class Controller extends Binder{
-        public Templistiner getTemplistiner(){
-            return (service.this);
+    public class LocalBinder extends Binder {
+        service getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return service.this;
         }
     }
 
-
-    @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
     }
 
+    /** method for clients */
+    public int getTemp() {
+        return temp;
+    }
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -78,10 +73,7 @@ public class service extends Service implements Templistiner {
             // Device does not support Bluetooth
             Toast.makeText(this, "Não há suporte a Bluetooth", Toast.LENGTH_LONG).show();
         }
-        // Inicia conexão bluetooth
 
-
-        // Gerencia o recebimento de dados do bluetooth
         mHandler = new Handler(){
             @Override
             public void handleMessage(Message msg) {
@@ -101,7 +93,7 @@ public class service extends Service implements Templistiner {
                             float num = Float.parseFloat(dadosCompletos);
                             //listaTemperaturas.add(new temperaturasBluetooth(lastX,num));
                             showNotification(num);
-                            //series.appendData(new DataPoint(lastX,num),true,1000);
+                            temp=(int)num;
 
                         }
                         catch(NumberFormatException e){
@@ -159,6 +151,7 @@ public class service extends Service implements Templistiner {
                     notifyID,
                     mNotifyBuilder.build());
         }
+
     }
 
     // Gerenciamento da conexão bluetooth
