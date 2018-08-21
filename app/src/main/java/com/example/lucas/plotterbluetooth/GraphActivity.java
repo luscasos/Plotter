@@ -2,20 +2,16 @@ package com.example.lucas.plotterbluetooth;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.graphics.Color;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.Message;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -26,9 +22,6 @@ import com.jjoe64.graphview.Viewport;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -36,7 +29,6 @@ import java.util.Objects;
 public class GraphActivity extends AppCompatActivity implements ServiceConnection {
 
     private static final int conectionRequest = 2;
-    private static final int MESSAGE_READ = 3;
     boolean conectado=false;
 
     service mService;
@@ -52,8 +44,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
     private ServiceConnection connection;
 
-    private Templistiner temp;
-
     ArrayList<temperaturasBluetooth> listaTemperaturas=null;
 
 
@@ -65,7 +55,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
 
-        listaTemperaturas = new ArrayList<temperaturasBluetooth>();
+        listaTemperaturas = new ArrayList<>();
 
         connection=this;
 
@@ -73,7 +63,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         OKButton = findViewById(R.id.OKButton);
 
         GraphView graph = findViewById(R.id.graph);
-        series = new LineGraphSeries<DataPoint>();
+        series = new LineGraphSeries<>();
         graph.addSeries(series);
 
         Viewport viewport = graph.getViewport();
@@ -125,7 +115,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
             }
         };
-
 
         //Thread responsável pelo processamento de dados.
         //O handler é passado para que sejá possível atualizar a tela.

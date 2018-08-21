@@ -30,7 +30,9 @@
             android:launchMode="singleTop">
         </activity>
 
-        <service android:name=".service" />
+        <service android:name=".service"
+            android:enabled="true" >
+        </service>
     </application>
 
 </manifest>
