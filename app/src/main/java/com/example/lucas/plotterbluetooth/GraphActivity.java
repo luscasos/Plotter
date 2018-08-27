@@ -78,15 +78,10 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
             public void onClick(View view) {
 
                 if(conectado){
-                    //desconectar
-                    /*try{
-                        meuSocket.close();
-                        conectado = false;
-                        parearButton.setText(R.string.Conectar);
-                        Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
-                    }catch (IOException erro){
-                        Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
-                    }*/
+                    Intent intent = new Intent(getApplicationContext(),service.class);
+                    intent.putExtra("finalizar",true);
+                    conectado=false;
+                    startService(intent);
                 }else{
                     //conectar
                     Intent abrelista = new Intent(getApplicationContext(), ListaDispositivos.class);
@@ -106,7 +101,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 //textView.setText(texto);
                 //int temp = Integer.parseInt(texto);
                 try{
-                    int temp = (int) msg.obj;
+                    float temp = (float) msg.obj;
                     series.appendData(new DataPoint(lastX,temp),true,1000);
                     lastX= (float) (lastX+0.5);
                 }catch (Exception ignored){
@@ -117,9 +112,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         };
 
         //Thread responsável pelo processamento de dados.
-        //O handler é passado para que sejá possível atualizar a tela.
-        ThreadProcessamento threadProcessamento = new ThreadProcessamento(handler);
-        threadProcessamento.start();
+        //O handler é passado para que sejá possível atualizar a tela
 
     }
 
@@ -147,7 +140,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
             // Call a method from the LocalService.
             // However, if this call were something that might hang, then this request should
             // occur in a separate thread to avoid slowing down the activity performance.
-            int num = mService.getTemp();
+            float num = mService.getTemp();
             Toast.makeText(this, "number: " + num, Toast.LENGTH_SHORT).show();
         }
     }
@@ -158,8 +151,12 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 if (resultCode == Activity.RESULT_OK){
                     String MAC = Objects.requireNonNull(data.getExtras()).getString(ListaDispositivos.ENDERECO_MAC);
                     //Toast.makeText(this, "MAC final" + MAC, Toast.LENGTH_LONG).show();
+                    ThreadProcessamento threadProcessamento = new ThreadProcessamento(handler);
+                    threadProcessamento.start();
+                    conectado=true;
                     Intent intent = new Intent(this,service.class);
                     intent.putExtra("MAC",MAC);
+                    intent.putExtra("finalizar",false);
                     startService(intent);
 
                 }else{
@@ -210,12 +207,12 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
         @Override
         public void run() {
-            int temp=0;
-            while (true) {
+            float temp=0;
+            while (conectado) {
                 Message message = new Message();
                 //defino um codigo para controle.
 
-                int num=0;
+                float num=0;
                 message.what = 1;
                 if (mBound) {
                     // Call a method from the LocalService.

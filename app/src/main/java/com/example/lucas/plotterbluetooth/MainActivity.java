@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         Intent intent = new Intent(this,service.class);
-        stopService(intent);
+        intent.putExtra("finalizar",true);
+        startService(intent);
     }
 }

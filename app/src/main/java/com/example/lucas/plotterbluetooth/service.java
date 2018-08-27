@@ -35,9 +35,10 @@ public class service extends Service {
     UUID meuUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     ConnectedThread connectedThread;
     boolean conectado=false;
-    int temp;
+    float temp;
 
     int notifyID = 1;
+    Notification notification;
 
     NotificationManager mNotificationManager;
 
@@ -56,7 +57,7 @@ public class service extends Service {
     }
 
     /** method for clients */
-    public int getTemp() {
+    public float getTemp() {
         return temp;
     }
 
@@ -65,7 +66,7 @@ public class service extends Service {
     public void onCreate() {
         super.onCreate();
 
-        Notification notification=new Notification();
+        notification=new Notification();
         startForeground(notifyID,notification);
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -82,9 +83,7 @@ public class service extends Service {
                     String recebidos = (String) msg.obj;
                     dadosRecebidos.append(recebidos);           // acumula dados recebidos
                     Log.d("Recebidos parcial",recebidos);
-                    int fimInformacao = dadosRecebidos.indexOf("}");
-
-                    //Log.d("Recebidos parcial",recebidos);
+                    int fimInformacao = dadosRecebidos.lastIndexOf("\n");
 
                     if(fimInformacao > 0){
                         String dadosCompletos = dadosRecebidos.substring(0,fimInformacao);
@@ -93,7 +92,7 @@ public class service extends Service {
                             float num = Float.parseFloat(dadosCompletos);
                             //listaTemperaturas.add(new temperaturasBluetooth(lastX,num));
                             showNotification(num);
-                            temp=(int)num;
+                            temp=num;
 
                         }
                         catch(NumberFormatException e){
@@ -108,7 +107,22 @@ public class service extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if(intent!=null) {
+        Boolean finalizar = intent.getBooleanExtra("finalizar",false);
+
+        if(conectado && finalizar){
+            //desconectar
+            try{
+                meuSocket.close();
+                conectado = false;
+                stopForeground(true);
+                Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_SHORT).show();
+            }catch (IOException erro){
+                Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
+            }
+
+        }
+
+        if(!conectado && !finalizar) {
             String MAC = intent.getStringExtra("MAC");
             Toast.makeText(this, "MAC no service" + MAC, Toast.LENGTH_SHORT).show();
 
@@ -181,7 +195,7 @@ public class service extends Service {
             int bytes; // bytes returned from read()
 
             // Keep listening to the InputStream until an exception occurs
-            while (true) {
+            while (conectado) {
                 try {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
@@ -208,20 +222,4 @@ public class service extends Service {
 
     }
 
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
-        if(conectado) {
-            try {
-                meuSocket.close();
-                conectado = false;
-                //Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_LONG).show();
-            } catch (IOException erro) {
-                Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
-            }
-        }
-
-    }
 }
