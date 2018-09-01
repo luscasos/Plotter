@@ -3,7 +3,9 @@ package com.example.lucas.plotterbluetooth;
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.app.TaskStackBuilder;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -20,13 +22,19 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.UUID;
+
+import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 
 public class service extends Service {
 
     private static final int MESSAGE_READ = 3;
 
     Handler mHandler;
+
+    ArrayList<temperaturasBluetooth> listaTemperaturas=null;
+    float lastX;
 
     StringBuilder dadosRecebidos = new StringBuilder();
     BluetoothAdapter mBluetoothAdapter = null;
@@ -66,6 +74,8 @@ public class service extends Service {
     public void onCreate() {
         super.onCreate();
 
+        listaTemperaturas = new ArrayList<temperaturasBluetooth>();
+
         notification=new Notification();
         startForeground(notifyID,notification);
 
@@ -82,65 +92,85 @@ public class service extends Service {
                 if (msg.what == MESSAGE_READ){
                     String recebidos = (String) msg.obj;
                     dadosRecebidos.append(recebidos);           // acumula dados recebidos
-                    Log.d("Recebidos parcial",recebidos);
+                    //Log.d("Recebidos parcial",recebidos);
                     int fimInformacao = dadosRecebidos.lastIndexOf("\n");
 
                     if(fimInformacao > 0){
                         String dadosCompletos = dadosRecebidos.substring(0,fimInformacao);
-                        Log.d("Recebidos",dadosCompletos);
+                        //Log.d("Recebidos init",dadosCompletos);
+
                         try {
                             float num = Float.parseFloat(dadosCompletos);
-                            //listaTemperaturas.add(new temperaturasBluetooth(lastX,num));
+                            listaTemperaturas.add(new temperaturasBluetooth(lastX,num));
+                            lastX= (float) (lastX+0.5);
                             showNotification(num);
                             temp=num;
 
                         }
-                        catch(NumberFormatException e){
-                            //Log.i();
+                        catch(NumberFormatException ignored){
                         }
-                        dadosRecebidos = new StringBuilder();       // reinicia o acumulador de dados
+                        dadosRecebidos = new StringBuilder();
                     }
-                }    }
+
+                }
+            }
         };
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        Boolean finalizar = intent.getBooleanExtra("finalizar",false);
-
-        if(conectado && finalizar){
-            //desconectar
-            try{
-                meuSocket.close();
-                conectado = false;
-                stopForeground(true);
-                Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_SHORT).show();
-            }catch (IOException erro){
-                Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
-            }
-
+        int operacao=0;
+        if(intent!=null){
+            operacao = intent.getIntExtra("operacao",0);
         }
 
-        if(!conectado && !finalizar) {
-            String MAC = intent.getStringExtra("MAC");
-            Toast.makeText(this, "MAC no service" + MAC, Toast.LENGTH_SHORT).show();
+        switch (operacao){
+            case 0: // get Graph
+                Log.d("Operacao ",""+operacao);
+                Intent intent2 = new Intent(this,GraphActivity.class);
+                intent2.putExtra("graphValues",listaTemperaturas);
+                intent2.putExtra("conectado",conectado);
+                intent2.putExtra("iniciado",true);
+                intent2.addFlags(FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent2);
+                break;
+            case 1:    // finalizar
+                if(conectado){
+                    //desconectar
+                    Log.d("Operacao ",""+operacao);
+                    conectado = false;
+                    try{
+                        meuSocket.close();
+                        stopForeground(true);
+                        //Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_SHORT).show();
+                    }catch (IOException erro){
+                        //Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
+                    }
 
-            meuDevice = mBluetoothAdapter.getRemoteDevice(MAC);
+                }
+                break;
+            case 2:
+                Log.d("Operacao ",""+operacao);
+                if(!conectado) {
+                    String MAC = intent.getStringExtra("MAC");
+                    //Toast.makeText(this, "MAC no service" + MAC, Toast.LENGTH_SHORT).show();
+                    if (MAC!=null){
+                        meuDevice = mBluetoothAdapter.getRemoteDevice(MAC);
+                        try {
+                            meuSocket = meuDevice.createInsecureRfcommSocketToServiceRecord(meuUUID);
+                            meuSocket.connect();
+                            conectado = true;
 
-            try {
-                meuSocket = meuDevice.createInsecureRfcommSocketToServiceRecord(meuUUID);
-                meuSocket.connect();
-                conectado = true;
+                            connectedThread = new service.ConnectedThread(meuSocket);
+                            connectedThread.start();
 
-                connectedThread = new service.ConnectedThread(meuSocket);
-                connectedThread.start();
-
-                Toast.makeText(this, "Conectado", Toast.LENGTH_SHORT).show();
-            } catch (IOException erro) {
-                conectado = false;
-                Toast.makeText(this, "Erro na conexão" + erro, Toast.LENGTH_SHORT).show();
-            }
+                            Toast.makeText(this, "Conectado", Toast.LENGTH_SHORT).show();
+                        } catch (IOException erro) {
+                            conectado = false;
+                            Toast.makeText(this, "Erro na conexão" + erro, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
         }
         return super.onStartCommand(intent, flags, startId);
     }
@@ -148,17 +178,20 @@ public class service extends Service {
     public void showNotification(float temp){
         mNotificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-// Sets an ID for the notification, so it can be updated
         NotificationCompat.Builder mNotifyBuilder = new NotificationCompat.Builder(this,"id")
-                //.setContentTitle("Temperatura")
-                //.setContentText("You've received new messages.")
                 .setSmallIcon(R.drawable.temperature)
                 .setColor(getResources().getColor(R.color.colorBackgroundTemp))
                 .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
 
+        Intent resultIntent = new Intent(this, GraphActivity.class);
+        resultIntent.setAction(Intent.ACTION_MAIN);
+        resultIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, resultIntent, 0);
+
+        mNotifyBuilder.setContentIntent(pendingIntent);
+
         mNotifyBuilder.setContentTitle("Temperatura "+temp+"ºC");
-        // Because the ID remains unchanged, the existing notification is
-        // updated.
+
         if (mNotificationManager != null) {
             mNotificationManager.notify(
                     notifyID,
@@ -208,6 +241,9 @@ public class service extends Service {
                     break;
                 }
             }
+            mNotificationManager.cancelAll();
+            stopForeground(true);
+            Log.d("Finalizando thread src",""+true);
         }
 
         // connectedThread.write(string);   Para enviar dados
@@ -219,7 +255,12 @@ public class service extends Service {
                 mmOutStream.write(msgBuffer);
             } catch (IOException ignored) { }
         }
-
     }
 
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Toast.makeText(this, "Service Destroyed", Toast.LENGTH_SHORT).show();
+    }
 }

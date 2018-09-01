@@ -1,6 +1,8 @@
 package com.example.lucas.plotterbluetooth;
 
-public class temperaturasBluetooth {
+import java.io.Serializable;
+
+public class temperaturasBluetooth implements Serializable {
         private float x;
         private float y;
 

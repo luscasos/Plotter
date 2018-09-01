@@ -11,8 +11,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
-
-
 public class MainActivity extends AppCompatActivity {
 
     Button OKButton;
@@ -27,7 +25,6 @@ public class MainActivity extends AppCompatActivity {
         graphButton = findViewById(R.id.graphButton);
 
     }
-
 
     // Inicia outra Activity a partir de botão ou ActionBar
     public void manual(){
@@ -62,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             case R.id.segundoBotao:
                 Toast.makeText(this, "segundo botão", Toast.LENGTH_SHORT).show();
-
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -70,10 +66,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        // Finaliza a Thread
         Intent intent = new Intent(this,service.class);
-        intent.putExtra("finalizar",true);
+        intent.putExtra("operacao",1);
         startService(intent);
+        //Finaliza o service
+        stopService(new Intent(this,service.class));
+
     }
 }
