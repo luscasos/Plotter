@@ -5,7 +5,6 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.app.TaskStackBuilder;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -23,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.UUID;
 
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
@@ -34,7 +35,6 @@ public class service extends Service {
     Handler mHandler;
 
     ArrayList<temperaturasBluetooth> listaTemperaturas=null;
-    float lastX;
 
     StringBuilder dadosRecebidos = new StringBuilder();
     BluetoothAdapter mBluetoothAdapter = null;
@@ -74,7 +74,7 @@ public class service extends Service {
     public void onCreate() {
         super.onCreate();
 
-        listaTemperaturas = new ArrayList<temperaturasBluetooth>();
+        listaTemperaturas = new ArrayList<>();
 
         notification=new Notification();
         startForeground(notifyID,notification);
@@ -101,8 +101,9 @@ public class service extends Service {
 
                         try {
                             float num = Float.parseFloat(dadosCompletos);
-                            listaTemperaturas.add(new temperaturasBluetooth(lastX,num));
-                            lastX= (float) (lastX+0.5);
+                            Calendar calendar = Calendar.getInstance();
+                            Date date = calendar.getTime();
+                            listaTemperaturas.add(new temperaturasBluetooth(date,num));
                             showNotification(num);
                             temp=num;
 

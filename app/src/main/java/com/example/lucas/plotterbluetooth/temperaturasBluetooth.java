@@ -1,21 +1,22 @@
 package com.example.lucas.plotterbluetooth;
 
 import java.io.Serializable;
+import java.util.Date;
 
 public class temperaturasBluetooth implements Serializable {
-        private float x;
+        private Date x;
         private float y;
 
-        public temperaturasBluetooth(float x,float y) {
+        public temperaturasBluetooth(Date x,float y) {
             this.x =x;
             this.y =y;
         }
 
-        public float getX() {
+        public Date getX() {
             return x;
         }
 
-        public void setX(int x) {
+        public void setX(Date x) {
             this.x = x;
         }
         public float getY() {

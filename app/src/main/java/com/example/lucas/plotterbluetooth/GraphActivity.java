@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Color;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -13,17 +14,25 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.jjoe64.graphview.DefaultLabelFormatter;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.Viewport;
 import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.DataPointInterface;
 import com.jjoe64.graphview.series.LineGraphSeries;
+import com.jjoe64.graphview.series.OnDataPointTapListener;
+import com.jjoe64.graphview.series.Series;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Objects;
 
 
@@ -37,13 +46,9 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
     ThreadProcessamento threadProcessamento;
 
-    float lastX=0;
-
     Handler handler;
     Intent intentService;
 
-    Button parearButton;
-    Button OKButton;
     TextView textView;
 
     private ServiceConnection connection;
@@ -51,6 +56,11 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     ArrayList<temperaturasBluetooth> listaTemperaturas=null;
 
     LineGraphSeries<DataPoint> series;
+    LineGraphSeries<DataPoint> series2;
+    @SuppressLint("SimpleDateFormat")
+    SimpleDateFormat sdf=new SimpleDateFormat("mm:ss");
+    @SuppressLint("SimpleDateFormat")
+    SimpleDateFormat sdf2=new SimpleDateFormat("hh:mm:ss");
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -58,7 +68,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
 
-        listaTemperaturas = new ArrayList<temperaturasBluetooth>();
+        listaTemperaturas = new ArrayList<>();
 
         connection=this;
         Boolean iniciado = false;
@@ -67,13 +77,48 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         series = new LineGraphSeries<>();
         graph.addSeries(series);
 
+
+        graph.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter(){
+            @Override
+            public String formatLabel(double value, boolean isValueX) {
+                if(isValueX){
+                    return sdf.format(new Date((long) value));
+                }else{
+                    return super.formatLabel(value, isValueX);
+                }
+
+            }
+        });
+
+        Calendar calendar = Calendar.getInstance();
+        Date date = calendar.getTime();
+        long longDate=date.getTime();
+        graph.getGridLabelRenderer().setNumHorizontalLabels(5);
+        graph.getGridLabelRenderer().setHumanRounding(false);
+
         Viewport viewport = graph.getViewport();
-        viewport.setScalable(true);
-        viewport.setMinX(0);
-        viewport.setMinY(0);
-        viewport.setMaxX(10);
-        viewport.setMaxY(20);
         viewport.setXAxisBoundsManual(true);
+        viewport.setScalable(true);
+        viewport.setMinX(longDate);
+        viewport.setMaxX(longDate+60000);
+        viewport.setMinY(0);
+        viewport.setMaxY(20);
+
+        series2 = new LineGraphSeries<>();  // escala secundaria
+        graph.getSecondScale().addSeries(series2);
+        graph.getSecondScale().setMinY(0);
+        graph.getSecondScale().setMaxY(2);
+        series2.setColor(Color.RED);
+        graph.getGridLabelRenderer().setVerticalLabelsSecondScaleColor(Color.RED);
+
+
+        series.setOnDataPointTapListener(new OnDataPointTapListener() {
+            @Override
+            public void onTap(Series series, DataPointInterface dataPoint) {
+                Date d = new Date((long)dataPoint.getX());
+                Toast.makeText(getBaseContext(), sdf2.format(d)+", Temperatura:"+dataPoint.getY(), Toast.LENGTH_SHORT).show();
+            }
+        });
 
         intentService  = getIntent();
         if(intentService!=null){
@@ -83,9 +128,13 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 public void handleMessage(Message msg) {
                     try{
                         float temp = (float) msg.obj;
-                        Log.d("Recebidos",temp+"");
-                        series.appendData(new DataPoint(lastX,temp),true,1000);
-                        lastX= (float) (lastX+0.5);
+
+                        Calendar calendar = Calendar.getInstance();
+                        Date date = calendar.getTime();
+
+                        series.appendData(new DataPoint(date,temp),true,1000);
+                        series2.appendData(new DataPoint(date,Math.log10(temp)),true,1000);
+
                     }catch (Exception ignored){
                     }
                 }
@@ -101,8 +150,13 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 int n = listaTemperaturas.size();
                 for (int i=0; i<n; i++) {
                     temperaturasBluetooth dado = listaTemperaturas.get(i);
+                    Log.d("Reconstruindo",dado.getX()+""+dado.getY());
                     series.appendData(new DataPoint(dado.getX(),dado.getY()),true,1000);
-                    lastX=dado.getX();
+                    series2.appendData(new DataPoint(dado.getX(),Math.log10(dado.getY())),true,1000);
+                    if (i==0){
+                        viewport.setMinX(dado.getX().getTime());
+                        viewport.setMaxX(dado.getX().getTime()+60000);
+                    }
                 }
 
                 threadProcessamento = new ThreadProcessamento(handler);
@@ -114,30 +168,8 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         if(!iniciado){
             initGraph();
         }
-
-        parearButton = findViewById(R.id.parearButton);
-        OKButton = findViewById(R.id.OKButton);
-
-        parearButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                if(conectado){
-                    //desconectar
-                    Intent intent = new Intent(getApplicationContext(),service.class);
-                    intent.putExtra("operacao",1);
-                    conectado=false;
-                    startService(intent);
-                }else{
-                    //conectar
-                    Intent abrelista = new Intent(getApplicationContext(), ListaDispositivos.class);
-                    startActivityForResult(abrelista,conectionRequest);
-                }
-            }
-        });
-
-
     }
+
 
     @Override
     protected void onResume() {
@@ -200,15 +232,37 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         }
     }
 
-    public void addEntry(View view){
-        int n = listaTemperaturas.size();
-        int i;
-        float x,y;
-        for (i=0; i<n; i++) {
-            temperaturasBluetooth dado = listaTemperaturas.get(i);
-            x=dado.getX();
-            y=dado.getY();
-            Toast.makeText(this,"X = "+x +"Y = "+y, Toast.LENGTH_SHORT).show();
+    // iniciando ActionBar
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    // Opções da ActionBar
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.primeiroBotao:
+                if(conectado){
+                    //desconectar
+                    Intent intent = new Intent(getApplicationContext(),service.class);
+                    intent.putExtra("operacao",1);
+                    conectado=false;
+                    startService(intent);
+                }else{
+                    //conectar
+                    Intent abrelista = new Intent(getApplicationContext(), ListaDispositivos.class);
+                    startActivityForResult(abrelista,conectionRequest);
+                }
+                return true;
+            case R.id.segundoBotao:
+                Toast.makeText(this, "segundo botão", Toast.LENGTH_SHORT).show();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
 
@@ -259,7 +313,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 }
 
                 try {
-                    //simula processamento de 1seg
                     Thread.sleep(100);
                 } catch (Exception e) {
                     e.printStackTrace();
