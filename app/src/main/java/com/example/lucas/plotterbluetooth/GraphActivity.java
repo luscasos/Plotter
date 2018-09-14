@@ -1,16 +1,24 @@
 package com.example.lucas.plotterbluetooth;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Color;
+import android.media.MediaScannerConnection;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -28,7 +36,17 @@ import com.jjoe64.graphview.series.DataPointInterface;
 import com.jjoe64.graphview.series.LineGraphSeries;
 import com.jjoe64.graphview.series.OnDataPointTapListener;
 import com.jjoe64.graphview.series.Series;
+import com.opencsv.CSVWriter;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -39,6 +57,7 @@ import java.util.Objects;
 public class GraphActivity extends AppCompatActivity implements ServiceConnection {
 
     private static final int conectionRequest = 2;
+    private static final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 3;
     boolean conectado=false;
 
     service mService;
@@ -61,6 +80,8 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     SimpleDateFormat sdf=new SimpleDateFormat("mm:ss");
     @SuppressLint("SimpleDateFormat")
     SimpleDateFormat sdf2=new SimpleDateFormat("hh:mm:ss");
+    @SuppressLint("SimpleDateFormat")
+    SimpleDateFormat sdf3=new SimpleDateFormat("HH:mm dd-MM-yyyy");
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -132,6 +153,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                         Calendar calendar = Calendar.getInstance();
                         Date date = calendar.getTime();
 
+                        listaTemperaturas.add(new temperaturasBluetooth(date,temp));
                         series.appendData(new DataPoint(date,temp),true,1000);
                         series2.appendData(new DataPoint(date,Math.log10(temp)),true,1000);
 
@@ -150,7 +172,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 int n = listaTemperaturas.size();
                 for (int i=0; i<n; i++) {
                     temperaturasBluetooth dado = listaTemperaturas.get(i);
-                    Log.d("Reconstruindo",dado.getX()+""+dado.getY());
+                    //Log.d("Reconstruindo",dado.getX()+""+dado.getY());
                     series.appendData(new DataPoint(dado.getX(),dado.getY()),true,1000);
                     series2.appendData(new DataPoint(dado.getX(),Math.log10(dado.getY())),true,1000);
                     if (i==0){
@@ -170,20 +192,19 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         }
     }
 
-
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d("onResume ",""+true);
+        //Log.d("onResume ",""+true);
         Intent intent = getIntent();
-        Log.d("Intent ",""+intent);
+        //Log.d("Intent ",""+intent);
 
     }
 
     @Override
     protected void onRestart() {
         super.onRestart();
-        Log.d("onRestart ",""+true);
+        //Log.d("onRestart ",""+true);
         initGraph();
     }
 
@@ -202,15 +223,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        // Unbind from the service
-        if (mBound) {
-            unbindService(connection);
-            mBound = false;
-        }
-    }
 
     protected void onActivityResult(int requestCode,int resultCode, Intent data){
         switch (requestCode){
@@ -259,7 +271,47 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 }
                 return true;
             case R.id.segundoBotao:
-                Toast.makeText(this, "segundo botão", Toast.LENGTH_SHORT).show();
+
+                // Checa a permissão para escrita externa
+
+                if (ContextCompat.checkSelfPermission(GraphActivity.this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                        != PackageManager.PERMISSION_GRANTED) {
+
+                    // Should we show an explanation?
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(GraphActivity.this,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+
+                        // Show an expanation to the user *asynchronously* -- don't block
+                        // this thread waiting for the user's response! After the user
+                        // sees the explanation, try again to request the permission.
+
+                    } else {
+
+                        // No explanation needed, we can request the permission.
+                        ActivityCompat.requestPermissions(GraphActivity.this,
+                                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                                MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
+
+                        // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                        // app-defined int constant. The callback method gets the
+                        // result of the request.
+                    }
+                }
+
+                int permissionCheck = ContextCompat.checkSelfPermission(GraphActivity.this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+                if(permissionCheck == PackageManager.PERMISSION_GRANTED ){
+                    Calendar calendar = Calendar.getInstance();
+                    Date date = calendar.getTime();
+                    CSV csv= new CSV();
+                    csv.FileWriter(this,sdf3.format(date)+".csv",listaTemperaturas);
+
+                }else{
+                    Toast.makeText(this, "Você deve permitir a escrita para salvar arquivos", Toast.LENGTH_SHORT).show();
+                }
+
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

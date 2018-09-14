@@ -10,7 +10,9 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaScannerConnection;
 import android.os.Binder;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -18,9 +20,11 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -47,6 +51,7 @@ public class service extends Service {
 
     int notifyID = 1;
     Notification notification;
+
 
     NotificationManager mNotificationManager;
 
@@ -172,6 +177,7 @@ public class service extends Service {
                         }
                     }
                 }
+
         }
         return super.onStartCommand(intent, flags, startId);
     }
