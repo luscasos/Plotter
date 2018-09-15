@@ -25,6 +25,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -69,6 +70,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     Intent intentService;
 
     TextView textView;
+    private MenuItem bluetoothButton;
 
     private ServiceConnection connection;
 
@@ -97,7 +99,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         GraphView graph = findViewById(R.id.graph);
         series = new LineGraphSeries<>();
         graph.addSeries(series);
-
 
         graph.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter(){
             @Override
@@ -190,15 +191,12 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         if(!iniciado){
             initGraph();
         }
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        //Log.d("onResume ",""+true);
-        Intent intent = getIntent();
-        //Log.d("Intent ",""+intent);
-
     }
 
     @Override
@@ -249,6 +247,8 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu, menu);
+        bluetoothButton = menu.findItem(R.id.primeiroBotao);
+
         return true;
     }
 
@@ -321,6 +321,9 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (mService != null) {
+            unbindService(connection);
+        }
         conectado=false;
     }
 

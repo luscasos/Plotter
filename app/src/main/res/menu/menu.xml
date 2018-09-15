@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:id="@+id/primeiroBotao"
+    <item
+        android:id="@+id/primeiroBotao"
+        android:icon="@drawable/ic_bluetooth_white_30dp"
         android:title="@string/primeiroBotaoAct"
-        app:showAsAction="never"/>
+        app:showAsAction="ifRoom" />
     <item android:id="@+id/segundoBotao"
+        android:icon="@drawable/ic_save_white_30dp"
         android:title="@string/segundoBotaoAct"
-        app:showAsAction="never"/>
+        app:showAsAction="ifRoom"/>
 </menu>
