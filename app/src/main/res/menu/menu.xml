@@ -10,4 +10,7 @@
         android:icon="@drawable/ic_save_white_30dp"
         android:title="@string/segundoBotaoAct"
         app:showAsAction="ifRoom"/>
+    <item android:id="@+id/terceiroBotao"
+        android:title="@string/terceiroBotaoAct"
+        app:showAsAction="never"/>
 </menu>

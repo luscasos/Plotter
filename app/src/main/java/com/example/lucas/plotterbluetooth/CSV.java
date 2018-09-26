@@ -44,6 +44,7 @@ public class CSV {
             Toast.makeText(context, "Arquivo salvo na pasta Downloads", Toast.LENGTH_SHORT).show();
             writer.close();
         }catch (IOException e){
+            Toast.makeText(context, "Falha ao salvar", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
 
