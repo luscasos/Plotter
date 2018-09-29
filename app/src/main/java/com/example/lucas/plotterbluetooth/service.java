@@ -10,7 +10,9 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaScannerConnection;
 import android.os.Binder;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -18,9 +20,11 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -55,6 +59,7 @@ public class service extends Service {
 
     public class LocalBinder extends Binder {
         service getService() {
+            // Return this instance of LocalService so clients can call public methods
             return service.this;
         }
     }
@@ -143,9 +148,9 @@ public class service extends Service {
                     try{
                         meuSocket.close();
                         stopForeground(true);
-                        Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_SHORT).show();
                     }catch (IOException erro){
-                        Toast.makeText(getApplicationContext(), "Ocorreu um erro ao desconectar", Toast.LENGTH_LONG).show();
+                        //Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
                     }
 
                 }
@@ -166,18 +171,22 @@ public class service extends Service {
                             connectedThread.start();
 
                             Toast.makeText(this, "Conectado", Toast.LENGTH_SHORT).show();
-
                         } catch (IOException erro) {
-                            erro.printStackTrace();
                             conectado = false;
-                            Toast.makeText(this, "Erro ao estabelecer conexão", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Erro na conexão" + erro, Toast.LENGTH_SHORT).show();
                         }
                     }
+                    if(!conectado){
+                        temp=-1000;
+                        try {
+                            Thread.sleep(200);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        temp=0;
+                    }
                 }
-                break;
-            case 3: // Apagar
-                Log.d("Operacao ",""+operacao);
-                listaTemperaturas = new ArrayList<>();
+
         }
         return super.onStartCommand(intent, flags, startId);
     }
@@ -209,6 +218,7 @@ public class service extends Service {
 
     // Gerenciamento da conexão bluetooth
     private class ConnectedThread extends Thread {
+        // private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
 
@@ -217,6 +227,8 @@ public class service extends Service {
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
 
+            // Get the input and output streams, using temp objects because
+            // member streams are final
             try {
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
@@ -231,23 +243,28 @@ public class service extends Service {
             buffer = new byte[1024];
             int bytes; // bytes returned from read()
 
+            // Keep listening to the InputStream until an exception occurs
             while (conectado) {
                 try {
+                    // Read from the InputStream
                     bytes = mmInStream.read(buffer);
 
                     String dadosBt = new String(buffer,0,bytes);
+                    // Send the obtained bytes to the UI activity
                     mHandler.obtainMessage(MESSAGE_READ, bytes, -1, dadosBt).sendToTarget();
 
                 } catch (IOException e) {
                     break;
                 }
             }
+
             mNotificationManager.cancelAll();
             stopForeground(true);
             Log.d("Finalizando thread src",""+true);
         }
 
-
+        // connectedThread.write(string);   Para enviar dados
+        /* Call this from the main activity to send data to the remote device */
         public void write(String dadosEnviar) {
 
             byte[] msgBuffer = dadosEnviar.getBytes();
@@ -256,6 +273,7 @@ public class service extends Service {
             } catch (IOException ignored) { }
         }
     }
+
 
     @Override
     public void onDestroy() {

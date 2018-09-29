@@ -8,7 +8,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.media.MediaScannerConnection;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -22,6 +26,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,6 +40,10 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 import com.jjoe64.graphview.series.OnDataPointTapListener;
 import com.jjoe64.graphview.series.Series;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -51,17 +60,18 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     service mService;
     boolean mBound = false;
 
-    Boolean fInt=true;
+    Viewport viewport;
 
+    GraphView graph;
+    boolean fInt = true;
+
+    long longDate;
     float temp=0;
 
     ThreadProcessamento threadProcessamento;
 
     Handler handler;
     Intent intentService;
-
-    long longDate;
-    Viewport viewport;
 
     TextView textView;
 
@@ -89,7 +99,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         connection=this;
         Boolean iniciado = false;
 
-        GraphView graph = findViewById(R.id.graph);
+        graph = findViewById(R.id.graph);
         series = new LineGraphSeries<>();
         graph.addSeries(series);
 
@@ -107,7 +117,12 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
         Calendar calendar = Calendar.getInstance();
         Date date = calendar.getTime();
-        longDate=date.getTime();
+
+        if(listaTemperaturas.size()>0){
+            longDate=listaTemperaturas.get(0).getX().getTime();
+        }else{
+            longDate=date.getTime();
+        }
 
         viewport = graph.getViewport();
         viewport.setXAxisBoundsManual(true);
@@ -152,7 +167,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                         Date date = calendar.getTime();
 
                         listaTemperaturas.add(new temperaturasBluetooth(date, temp));
-
                         series.appendData(new DataPoint(date, temp), true, 60000);
                         series2.appendData(new DataPoint(date, Math.log10(temp)), true, 60000);
                         if (fInt) {
@@ -160,6 +174,9 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                             viewport.setMinX(dado.getX().getTime());
                             longDate = dado.getX().getTime();
                             fInt = false;
+                            int size = listaTemperaturas.size();
+                            dado = listaTemperaturas.get(size - 1);
+                            viewport.setMaxX(dado.getX().getTime() + 1);
                         }
                         viewport.setMinX(longDate);
                         viewport.setMinY(0);
@@ -170,21 +187,22 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
             };
 
             conectado = intentService.getBooleanExtra("conectado",false);
-            Log.d("conectado onCreate",""+conectado);
+            Log.d("conectado ",""+conectado);
 
             listaTemperaturas= (ArrayList<temperaturasBluetooth>) intentService.getSerializableExtra("graphValues");
             iniciado = intentService.getBooleanExtra("iniciado",false);
             if(conectado){
+
                 int n = listaTemperaturas.size();
                 for (int i=0; i<n; i++) {
                     temperaturasBluetooth dado = listaTemperaturas.get(i);
+                    //Log.d("Reconstruindo",dado.getX()+""+dado.getY());
                     series.appendData(new DataPoint(dado.getX(),dado.getY()),true,60000);
                     series2.appendData(new DataPoint(dado.getX(),Math.log10(dado.getY())),true,60000);
-
                     if (i==0){
                         longDate = dado.getX().getTime();
                         viewport.setMinX(dado.getX().getTime());
-                        viewport.setMaxX(dado.getX().getTime()+60000);
+                        viewport.setMaxX(listaTemperaturas.get(n-1).getX().getTime());
                     }
                 }
                 temp=listaTemperaturas.get(n-1).getY();
@@ -198,7 +216,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         if(!iniciado){
             initGraph();
         }
-
     }
 
     @Override
@@ -209,9 +226,11 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     @Override
     protected void onRestart() {
         super.onRestart();
-        //Log.d("onRestart ",""+true);
+        Log.d("onRestart ",""+true);
         initGraph();
     }
+
+
 
     void initGraph(){
         Intent intent = new Intent(this,service.class);
@@ -244,7 +263,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                     startService(intent);
 
                 }else{
-                    conectado=false;
                     Toast.makeText(this, "Falha ao obter MAC", Toast.LENGTH_SHORT).show();
                 }
         }
@@ -266,13 +284,13 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
             case R.id.primeiroBotao:
                 if(conectado){
                     //desconectar
+                    Toast.makeText(this, "Desconectando...", Toast.LENGTH_SHORT).show();
                     Intent intent = new Intent(getApplicationContext(),service.class);
                     intent.putExtra("operacao",1);
                     conectado=false;
                     startService(intent);
                 }else{
                     //conectar
-                    //serviceConectado=true;
                     Intent abrelista = new Intent(getApplicationContext(), ListaDispositivos.class);
                     startActivityForResult(abrelista,conectionRequest);
                 }
@@ -288,6 +306,10 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                     // Should we show an explanation?
                     if (ActivityCompat.shouldShowRequestPermissionRationale(GraphActivity.this,
                             Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+
+                        // Show an expanation to the user *asynchronously* -- don't block
+                        // this thread waiting for the user's response! After the user
+                        // sees the explanation, try again to request the permission.
 
                     } else {
 
@@ -307,13 +329,16 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                     CSV csv= new CSV();
                     csv.FileWriter(this,sdf3.format(date)+".csv",listaTemperaturas);
 
+
+
+                }else{
+                    Toast.makeText(this, "Você deve permitir a escrita para salvar arquivos", Toast.LENGTH_LONG).show();
                 }
 
                 return true;
-
             case R.id.terceiroBotao:
 
-                Toast.makeText(this, "Botão 3", Toast.LENGTH_SHORT).show();
+               // Toast.makeText(this, "Botão 3", Toast.LENGTH_SHORT).show();
 
                 Intent it2 = new Intent(GraphActivity.this,service.class);
                 it2.putExtra("operacao",3);
@@ -335,9 +360,9 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 graph.getSecondScale().addSeries(series2);
                 series2.setColor(Color.RED);
 
-                viewport = graph.getViewport();
+                Viewport viewport = graph.getViewport();
                 viewport.setMinX(longDate);
-                viewport.setMaxX(longDate+60000);
+                viewport.setMaxX(longDate+1);
                 series.setOnDataPointTapListener(new OnDataPointTapListener() {
                     @Override
                     public void onTap(Series series, DataPointInterface dataPoint) {
@@ -347,10 +372,58 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 });
 
                 return true;
-
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    public Bitmap screenShot(View view) {
+        Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap) {
+            @Override
+            public boolean isHardwareAccelerated() {
+                return true;
+            }
+        };
+
+// not it's work
+        view.draw(canvas);
+        return bitmap;
+    }
+
+    private void storeImage(Bitmap image) {
+        File pictureFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        if (pictureFile == null) {
+            Log.d("Error","creating media file, check storage permissions");// e.getMessage());
+            return;
+        }
+        try {
+            FileOutputStream fos = new FileOutputStream(pictureFile+"/print");
+            image.compress(Bitmap.CompressFormat.PNG, 90, fos);
+            fos.close();
+        } catch (FileNotFoundException e) {
+            Log.d("File not found: ", e.getMessage());
+        } catch (IOException e) {
+            Log.d("Error accessing file: ", e.getMessage());
+        }
+        MediaScannerConnection.scanFile(this, new String[] {pictureFile.toString()+"/print"}, null, null);
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mService != null) {
+            unbindService(connection);
+        }
+        conectado=false;
+    }
+
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+        com.example.lucas.plotterbluetooth.service.LocalBinder binder = (com.example.lucas.plotterbluetooth.service.LocalBinder) service;
+        mService = binder.getService();
+        mBound = true;
     }
 
 
@@ -379,24 +452,6 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (mService != null) {
-            unbindService(connection);
-        }
-        Log.d("onDestroy graph",true+"");
-
-        conectado=false;
-    }
-
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        com.example.lucas.plotterbluetooth.service.LocalBinder binder = (com.example.lucas.plotterbluetooth.service.LocalBinder) service;
-        mService = binder.getService();
-        mBound = true;
-    }
-
-    @Override
     public void onServiceDisconnected(ComponentName name) {
         mBound = false;
     }
@@ -411,9 +466,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
         @Override
         public void run() {
-
             float num;
-
             while (conectado) {
                 Message message = new Message();
 
@@ -421,10 +474,14 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 if (mBound) {
                     num = mService.getTemp();
                     message.obj =num;
-
-                    if(num != temp){
-                        temp=num;
-                        handler.sendMessage(message);
+                    //Toast.makeText(this, "number: " + num, Toast.LENGTH_SHORT).show();
+                    if(num==-1000){
+                        conectado=false;
+                    }else if(num!=temp){
+                    //Envio da mensagem.
+                    handler.sendMessage(message);
+                    //Log.d("Recebidos thread",temp+"");
+                    temp=num;
                     }
                 }
 
@@ -433,10 +490,8 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
             }
-
-            Log.d("Finalizando thread gph",""+conectado);
+            Log.d("Finalizando thread gph",""+true);
 
         }
     }
