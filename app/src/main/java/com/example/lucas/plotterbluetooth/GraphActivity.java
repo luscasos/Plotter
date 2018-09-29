@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.media.MediaScannerConnection;
 import android.os.Environment;
 import android.os.Handler;
@@ -27,6 +28,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -129,21 +131,27 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         viewport.setYAxisBoundsManual(true);
         viewport.setMinX(longDate);
         viewport.setMaxX(longDate+60000);
+        viewport.setBackgroundColor(Color.WHITE);
+
 
         graph.getGridLabelRenderer().setHorizontalLabelsVisible(false);
 
         series2 = new LineGraphSeries<>();  // escala secundaria
         graph.getSecondScale().addSeries(series2);
         graph.getSecondScale().setMinY(0);
-        graph.getSecondScale().setMaxY(2);
+        graph.getSecondScale().setMaxY(8);
+        //graph.setTextAlignment(View.TEXT_ALIGNMENT_TEXT_START);
         series2.setColor(Color.RED);
         graph.getGridLabelRenderer().setVerticalLabelsSecondScaleColor(Color.RED);
 
 
         GridLabelRenderer glr = graph.getGridLabelRenderer();
-        glr.setPadding(56); // should allow for 3 digits to fit on screen
+        glr.setPadding(50); // should allow for 3 digits to fit on screen
+        glr.setVerticalLabelsColor(Color.BLUE);
         glr.setNumVerticalLabels(9);
+        glr.setVerticalLabelsAlign(Paint.Align.RIGHT);
         viewport.setYAxisBoundsManual(false);
+
 
 
         series.setOnDataPointTapListener(new OnDataPointTapListener() {
@@ -168,7 +176,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
                         listaTemperaturas.add(new temperaturasBluetooth(date, temp));
                         series.appendData(new DataPoint(date, temp), true, 60000);
-                        series2.appendData(new DataPoint(date, Math.log10(temp)), true, 60000);
+                        series2.appendData(new DataPoint(date, 4*Math.log10(temp-18)), true, 60000);
                         if (fInt) {
                             temperaturasBluetooth dado = listaTemperaturas.get(0);
                             viewport.setMinX(dado.getX().getTime());
@@ -198,13 +206,15 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                     temperaturasBluetooth dado = listaTemperaturas.get(i);
                     //Log.d("Reconstruindo",dado.getX()+""+dado.getY());
                     series.appendData(new DataPoint(dado.getX(),dado.getY()),true,60000);
-                    series2.appendData(new DataPoint(dado.getX(),Math.log10(dado.getY())),true,60000);
+                    series2.appendData(new DataPoint(dado.getX(),4*Math.log10((dado.getY()-18))),true,60000);
                     if (i==0){
                         longDate = dado.getX().getTime();
                         viewport.setMinX(dado.getX().getTime());
                         viewport.setMaxX(listaTemperaturas.get(n-1).getX().getTime());
                     }
                 }
+                glr.setPadding(50); // should allow for 3 digits to fit on screen
+                glr.setVerticalLabelsAlign(Paint.Align.RIGHT);
                 temp=listaTemperaturas.get(n-1).getY();
 
                 threadProcessamento = new ThreadProcessamento(handler);
@@ -220,6 +230,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
     @Override
     protected void onResume() {
+        Log.d("onResume ",""+true);
         super.onResume();
     }
 
@@ -329,7 +340,8 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                     CSV csv= new CSV();
                     csv.FileWriter(this,sdf3.format(date)+".csv",listaTemperaturas);
 
-
+                    Bitmap bitmap = graph.takeSnapshot();
+                    saveImage(bitmap);
 
                 }else{
                     Toast.makeText(this, "Você deve permitir a escrita para salvar arquivos", Toast.LENGTH_LONG).show();
@@ -360,6 +372,13 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 graph.getSecondScale().addSeries(series2);
                 series2.setColor(Color.RED);
 
+                graph.getGridLabelRenderer().setPadding(30); // should allow for 3 digits to fit on screen
+
+
+                graph.getGridLabelRenderer().setVerticalLabelsAlign(Paint.Align.RIGHT);
+
+                viewport.setBackgroundColor(Color.WHITE);
+
                 Viewport viewport = graph.getViewport();
                 viewport.setMinX(longDate);
                 viewport.setMaxX(longDate+1);
@@ -377,36 +396,28 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
         }
     }
 
-    public Bitmap screenShot(View view) {
-        Bitmap bitmap = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap) {
-            @Override
-            public boolean isHardwareAccelerated() {
-                return true;
-            }
-        };
 
-// not it's work
-        view.draw(canvas);
-        return bitmap;
-    }
+    private void saveImage(Bitmap finalBitmap) {
 
-    private void storeImage(Bitmap image) {
-        File pictureFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-        if (pictureFile == null) {
-            Log.d("Error","creating media file, check storage permissions");// e.getMessage());
-            return;
-        }
+        String root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString();
+        File myDir = new File(root + "/PlotterGrafico");
+        myDir.mkdirs();
+
+        String timeStamp = sdf3.format(new Date());
+        String fname = "Grafico "+ timeStamp +".jpg";
+
+        File file = new File(myDir, fname);
+        Toast.makeText(getBaseContext(), file.toString(), Toast.LENGTH_SHORT).show();
+        if (file.exists()) file.delete ();
         try {
-            FileOutputStream fos = new FileOutputStream(pictureFile+"/print");
-            image.compress(Bitmap.CompressFormat.PNG, 90, fos);
-            fos.close();
-        } catch (FileNotFoundException e) {
-            Log.d("File not found: ", e.getMessage());
-        } catch (IOException e) {
-            Log.d("Error accessing file: ", e.getMessage());
+            FileOutputStream out = new FileOutputStream(file);
+            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+            out.flush();
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        MediaScannerConnection.scanFile(this, new String[] {pictureFile.toString()+"/print"}, null, null);
+        MediaScannerConnection.scanFile(this, new String[] {file.toString()}, null, null);
 
     }
 
@@ -440,6 +451,8 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                     Date date = calendar.getTime();
                     CSV csv= new CSV();
                     csv.FileWriter(this,sdf3.format(date)+".csv",listaTemperaturas);
+                    Bitmap bitmap = graph.takeSnapshot();
+                    saveImage(bitmap);
 
                 } else {
                     Toast.makeText(this, "Você deve permitir a escrita para salvar arquivos", Toast.LENGTH_SHORT).show();
