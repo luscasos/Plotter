@@ -28,6 +28,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -95,6 +96,7 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         listaTemperaturas = new ArrayList<>();
 
@@ -146,10 +148,10 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
 
 
         GridLabelRenderer glr = graph.getGridLabelRenderer();
-        glr.setPadding(50); // should allow for 3 digits to fit on screen
+        glr.setPadding(60); // should allow for 3 digits to fit on screen
         glr.setVerticalLabelsColor(Color.BLUE);
         glr.setNumVerticalLabels(9);
-        glr.setVerticalLabelsAlign(Paint.Align.RIGHT);
+        glr.setVerticalLabelsAlign(Paint.Align.LEFT);
         viewport.setYAxisBoundsManual(false);
 
 
@@ -206,15 +208,13 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                     temperaturasBluetooth dado = listaTemperaturas.get(i);
                     //Log.d("Reconstruindo",dado.getX()+""+dado.getY());
                     series.appendData(new DataPoint(dado.getX(),dado.getY()),true,60000);
-                    series2.appendData(new DataPoint(dado.getX(),4*Math.log10((dado.getY()-18))),true,60000);
+                    series2.appendData(new DataPoint(dado.getX(),4*Math.log10(dado.getY()-18)),true,60000);
                     if (i==0){
                         longDate = dado.getX().getTime();
                         viewport.setMinX(dado.getX().getTime());
                         viewport.setMaxX(listaTemperaturas.get(n-1).getX().getTime());
                     }
                 }
-                glr.setPadding(50); // should allow for 3 digits to fit on screen
-                glr.setVerticalLabelsAlign(Paint.Align.RIGHT);
                 temp=listaTemperaturas.get(n-1).getY();
 
                 threadProcessamento = new ThreadProcessamento(handler);
@@ -372,12 +372,15 @@ public class GraphActivity extends AppCompatActivity implements ServiceConnectio
                 graph.getSecondScale().addSeries(series2);
                 series2.setColor(Color.RED);
 
-                graph.getGridLabelRenderer().setPadding(30); // should allow for 3 digits to fit on screen
+                graph.getGridLabelRenderer().setPadding(60); // should allow for 3 digits to fit on screen
 
 
-                graph.getGridLabelRenderer().setVerticalLabelsAlign(Paint.Align.RIGHT);
+                graph.getGridLabelRenderer().setVerticalLabelsAlign(Paint.Align.LEFT);
 
                 viewport.setBackgroundColor(Color.WHITE);
+
+                graph.getSecondScale().setMinY(0);
+                graph.getSecondScale().setMaxY(8);
 
                 Viewport viewport = graph.getViewport();
                 viewport.setMinX(longDate);

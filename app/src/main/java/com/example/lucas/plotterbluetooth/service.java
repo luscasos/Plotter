@@ -186,6 +186,10 @@ public class service extends Service {
                         temp=0;
                     }
                 }
+                break;
+            case 3:
+                String enviar = intent.getStringExtra("enviar");
+                connectedThread.write(enviar);
 
         }
         return super.onStartCommand(intent, flags, startId);

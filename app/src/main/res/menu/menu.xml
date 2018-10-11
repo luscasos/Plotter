@@ -3,11 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/primeiroBotao"
-        android:icon="@drawable/ic_bluetooth_white_30dp"
+        android:icon="@drawable/ic_bluetooth_black_30dp"
         android:title="@string/primeiroBotaoAct"
         app:showAsAction="ifRoom" />
     <item android:id="@+id/segundoBotao"
-        android:icon="@drawable/ic_save_white_30dp"
+        android:icon="@drawable/ic_save_black_30dp"
         android:title="@string/segundoBotaoAct"
         app:showAsAction="ifRoom"/>
     <item android:id="@+id/terceiroBotao"
