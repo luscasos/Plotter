@@ -40,3 +40,8 @@ Selecione o caminho da pasta extraida.
 Basta clicar em "Run" e selecionar o aparelho android conectado via USB
 ```
 
+## Fluxo de dados
+
+A conexão com o Bluetooth é feita apos a obtenção do MAC do dispositivo dando inicio ao service (Linha 307 GraphActivity.java), que é direcionado para o onStartCommand no service.java que liga o Bluetooth, se iniciado com sucesso o recebimento de dados é dado no Handler (Linha 91, service.java) onde deve ser tratado o tamanho da string recebida que sera retornada ao GraphActivity.java por meio da variavel string "dado".
+O tratamento da String para plot no GraphActivity.java ocorre no Handler (linha 185).
+
