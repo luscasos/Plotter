@@ -1,6 +1,7 @@
 package com.example.lucas.plotterbluetooth;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -10,9 +11,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.Intent;
-import android.media.MediaScannerConnection;
 import android.os.Binder;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -20,16 +19,15 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.UUID;
 
+import static android.content.Intent.CATEGORY_TAB;
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 
 public class service extends Service {
@@ -37,6 +35,7 @@ public class service extends Service {
     private static final int MESSAGE_READ = 3;
 
     Handler mHandler;
+    boolean iniciar=false;
 
     ArrayList<temperaturasBluetooth> listaTemperaturas=null;
 
@@ -47,13 +46,13 @@ public class service extends Service {
     UUID meuUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     ConnectedThread connectedThread;
     boolean conectado=false;
-    float temp;
+    String dado;
 
     int notifyID = 1;
-    Notification notification;
+   // Notification notification;
 
 
-    NotificationManager mNotificationManager;
+    //NotificationManager mNotificationManager;
 
     private final IBinder mBinder = new LocalBinder();
 
@@ -70,8 +69,8 @@ public class service extends Service {
     }
 
     /** method for clients */
-    public float getTemp() {
-        return temp;
+    public String getTemp() {
+        return dado;
     }
 
     @SuppressLint("HandlerLeak")
@@ -81,8 +80,8 @@ public class service extends Service {
 
         listaTemperaturas = new ArrayList<>();
 
-        notification=new Notification();
-        startForeground(notifyID,notification);
+        //notification=new Notification();
+        //startForeground(notifyID,notification);
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
@@ -98,25 +97,33 @@ public class service extends Service {
                     String recebidos = (String) msg.obj;
                     dadosRecebidos.append(recebidos);           // acumula dados recebidos
                     //Log.d("Recebidos parcial",recebidos);
+                    Log.d("Informação ",dadosRecebidos+"");
+                    Log.d("tamanho",dadosRecebidos.lastIndexOf("\n")+"");
                     int fimInformacao = dadosRecebidos.lastIndexOf("\n");
+                    if(fimInformacao>41){
+                        dadosRecebidos = new StringBuilder();
+                        fimInformacao=0;
+                    }
 
-                    if(fimInformacao > 0){
-                        String dadosCompletos = dadosRecebidos.substring(0,fimInformacao);
-                        //Log.d("Recebidos init",dadosCompletos);
-
-                        try {
-                            float num = Float.parseFloat(dadosCompletos);
+                    if(fimInformacao >= 22){
+                        String substring = dadosRecebidos.substring(fimInformacao-22,fimInformacao);
+                        if(substring.length()==22) {
+                            dado=substring;
                             Calendar calendar = Calendar.getInstance();
                             Date date = calendar.getTime();
-                            listaTemperaturas.add(new temperaturasBluetooth(date,num));
-                            showNotification(num);
-                            temp=num;
+                            if(iniciar==true) {
+                                listaTemperaturas.add(new temperaturasBluetooth(date, Float.parseFloat(dado.substring(2, 6)), Float.parseFloat(dado.substring(8, 15))));
+                            }
+                            Log.d("temp",dado.substring(2,6));
+                            Log.d("pu",dado.substring(8,15));
+                            Log.d("tensao",dado.substring(16,19));
+                        }
+                        Log.d("subString ",substring);
 
-                        }
-                        catch(NumberFormatException ignored){
-                        }
+
                         dadosRecebidos = new StringBuilder();
                     }
+
 
                 }
             }
@@ -145,9 +152,10 @@ public class service extends Service {
                     //desconectar
                     Log.d("Operacao ",""+operacao);
                     conectado = false;
+                    iniciar=false;
                     try{
                         meuSocket.close();
-                        stopForeground(true);
+                       // stopForeground(true);
                         //Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_SHORT).show();
                     }catch (IOException erro){
                         //Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
@@ -172,53 +180,66 @@ public class service extends Service {
 
                             Toast.makeText(this, "Conectado", Toast.LENGTH_SHORT).show();
                         } catch (IOException erro) {
-                            conectado = false;
-                            Toast.makeText(this, "Erro na conexão" + erro, Toast.LENGTH_SHORT).show();
+                            try {
+                                Log.d("","trying fallback...");
+                                meuSocket.close();
+                                meuSocket.connect();
+                                meuSocket = meuDevice.createInsecureRfcommSocketToServiceRecord(meuUUID);
+                                connectedThread = new service.ConnectedThread(meuSocket);
+                                connectedThread.start();
+
+                                Log.d("","Connected");
+                            }
+                            catch (Exception e2) {
+                                Log.d("", "Couldn't establish Bluetooth connection!");
+                                conectado = false;
+                                Toast.makeText(this, "Erro na conexão" + erro, Toast.LENGTH_SHORT).show();
+                            }
+
                         }
-                    }
-                    if(!conectado){
-                        temp=-1000;
-                        try {
-                            Thread.sleep(200);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        temp=0;
                     }
                 }
                 break;
             case 3:
-                String enviar = intent.getStringExtra("enviar");
-                connectedThread.write(enviar);
+                listaTemperaturas= new ArrayList<>();
+                if(conectado){
+                connectedThread.write("*");
+                iniciar=true;}
+                break;
+            case 4:
+                connectedThread.write("*");
+                iniciar=true;
 
         }
         return super.onStartCommand(intent, flags, startId);
     }
 
-    public void showNotification(float temp){
-        mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        NotificationCompat.Builder mNotifyBuilder = new NotificationCompat.Builder(this,"id")
-                .setSmallIcon(R.drawable.temperature)
-                .setColor(getResources().getColor(R.color.colorBackgroundTemp))
-                .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
-
-        Intent resultIntent = new Intent(this, GraphActivity.class);
-        resultIntent.setAction(Intent.ACTION_MAIN);
-        resultIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, resultIntent, 0);
-
-        mNotifyBuilder.setContentIntent(pendingIntent);
-
-        mNotifyBuilder.setContentTitle("Temperatura "+temp+"ºC");
-
-        if (mNotificationManager != null) {
-            mNotificationManager.notify(
-                    notifyID,
-                    mNotifyBuilder.build());
-        }
-
-    }
+//    public void showNotification(){
+//        mNotificationManager =
+//                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+//        NotificationCompat.Builder mNotifyBuilder = new NotificationCompat.Builder(this,"id")
+//                .setSmallIcon(R.drawable.temperature)
+//                .setColor(getResources().getColor(R.color.colorBackgroundTemp))
+//                .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+//
+//        Intent resultIntent = new Intent(this, GraphActivity.class);
+//        resultIntent.setAction(Intent.ACTION_MAIN);
+//        resultIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+//        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, resultIntent, 0);
+//
+//        mNotifyBuilder.setContentIntent(pendingIntent);
+//
+//
+//        mNotifyBuilder.setContentTitle("Conexão perdida");
+//        mNotifyBuilder.setContentText("Tentando reconectar");
+//
+//        if (mNotificationManager != null) {
+//            mNotificationManager.notify(
+//                    notifyID,
+//                    mNotifyBuilder.build());
+//        }
+//
+//    }
 
     // Gerenciamento da conexão bluetooth
     private class ConnectedThread extends Thread {
@@ -247,6 +268,11 @@ public class service extends Service {
             buffer = new byte[1024];
             int bytes; // bytes returned from read()
 
+            try {
+                mmInStream.reset();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             // Keep listening to the InputStream until an exception occurs
             while (conectado) {
                 try {
@@ -258,12 +284,27 @@ public class service extends Service {
                     mHandler.obtainMessage(MESSAGE_READ, bytes, -1, dadosBt).sendToTarget();
 
                 } catch (IOException e) {
-                    break;
+
+                    //showNotification();
+                    try {
+                        meuSocket.connect();
+//                        mNotificationManager.cancelAll();
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+
+                    }
                 }
             }
+            try{
+                meuSocket.close();
+                // stopForeground(true);
+                //Toast.makeText(getApplicationContext(), "Bluetooth desconectado", Toast.LENGTH_SHORT).show();
+            }catch (IOException erro){
+                //Toast.makeText(getApplicationContext(), "Ocorreu um erro", Toast.LENGTH_LONG).show();
+            }
 
-            mNotificationManager.cancelAll();
-            stopForeground(true);
+//            mNotificationManager.cancelAll();
+            //stopForeground(true);
             Log.d("Finalizando thread src",""+true);
         }
 

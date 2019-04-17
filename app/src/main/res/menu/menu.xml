@@ -6,6 +6,9 @@
         android:icon="@drawable/ic_bluetooth_black_30dp"
         android:title="@string/primeiroBotaoAct"
         app:showAsAction="ifRoom" />
+    <item android:id="@+id/quartoBotao"
+        android:title="@string/iniciar"
+        app:showAsAction="never"/>
     <item android:id="@+id/segundoBotao"
         android:icon="@drawable/ic_save_black_30dp"
         android:title="@string/segundoBotaoAct"

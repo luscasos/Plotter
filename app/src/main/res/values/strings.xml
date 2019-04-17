@@ -1,9 +1,9 @@
 <resources>
     <string name="app_name">PlotterBluetooth</string>
     <string name="segundoBotaoAct">Salvar</string>
-    <string name="terceiroBotaoAct">Apagar</string>
+    <string name="terceiroBotaoAct">Reiniciar</string>
     <string name="primeiroBotaoAct">Conectar</string>
-    <string name="TextoManual">Historicamente, a cerveja já era conhecida pelos antigos sumérios, egípcios, mesopotâmios e iberos, remontando, pelo menos, a 6 000 a.C.[8] A agricultura surgiu na Mesopotâmia em um período entre a revolução do Neolítico e a Idade dos Metais. A mais antiga lei que regulamenta a produção e a venda de cerveja é a Estela de Hamurabi, que data de 1 760 a.C. Nela, se condena à morte quem não respeita os critérios de produção de cerveja indicados. Incluía várias leis de comercialização, fabricação e consumo da cerveja, relacionando direitos e deveres dos clientes das tabernas.[9] O Código de Hamurabi também estabelecia uma ração diária de cerveja para o povo da Babilônia: 2 litros para os trabalhadores, 3 para os funcionários públicos e 5 para os administradores e o sumo sacerdote. O código também impunha punições severas para os taberneiros que tentassem enganar os seus clientes.[10]
+    <string name="TextoManual"> \t<b>Historicamente</b>, a cerveja já era conhecida\n pelos antigos sumérios, egípcios, mesopotâmios e iberos, remontando, pelo menos, a 6 000 a.C.[8] A agricultura surgiu na Mesopotâmia em um período entre a revolução do Neolítico e a Idade dos Metais. A mais antiga lei que regulamenta a produção e a venda de cerveja é a Estela de Hamurabi, que data de 1 760 a.C. Nela, se condena à morte quem não respeita os critérios de produção de cerveja indicados. Incluía várias leis de comercialização, fabricação e consumo da cerveja, relacionando direitos e deveres dos clientes das tabernas.[9] O Código de Hamurabi também estabelecia uma ração diária de cerveja para o povo da Babilônia: 2 litros para os trabalhadores, 3 para os funcionários públicos e 5 para os administradores e o sumo sacerdote. O código também impunha punições severas para os taberneiros que tentassem enganar os seus clientes.[10]
 
 A notícia mais antiga que se tem da cerveja vem de 2 600 a 2 350 a.C. Desta época, arqueólogos encontraram menção no Hino a Ninkasi, a deusa da cerveja, de que os sumérios já produziam a bebida. Já na Babilônia dá-se conta da existência de diferentes tipos de cerveja, originadas de diversas combinações de plantas e aromas, e o uso de diferentes quantidades de mel. Mesopotâmios estavam bebendo cerveja de vasos individuais há 3.500 anos.[11]
 
@@ -18,4 +18,6 @@ A cerveja teve alguma importância na vida dos primeiros romanos, mas, durante a
     <string name="liga_led">Liga Led</string>
     <string name="manual">Manual</string>
     <string name="parear">Parear</string>
+    <string name="titulo">Titulo</string>
+    <string name="iniciar">iniciar</string>
 </resources>
